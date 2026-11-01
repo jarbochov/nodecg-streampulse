@@ -7,6 +7,6 @@
     "compatibleRange": "^2.0.0"
   },
   "dependencies": {
-    "streampulse": "github:jarbochov/StreamPulse#3c9e7e3"
+    "streampulse": "github:jarbochov/StreamPulse#2eb77c1"
   }
 }

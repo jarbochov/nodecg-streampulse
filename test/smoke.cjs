@@ -4,8 +4,10 @@ const fs = require('fs'); const os = require('os'); const path = require('path')
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ncg-sp-'));
 const reps = {}; const messages = [];
 const nodecg = {
-    bundleConfig: { port: 3917, configPath: path.join(dir, 'config.json'), dataDir: path.join(dir, 'data'), serverPath: process.env.STREAMPULSE_SERVER || '' },
-    Replicant: (name, opts) => (reps[name] ??= { value: opts?.defaultValue }),
+    bundleConfig: { port: 3917, configPath: path.join(dir, 'config.json'), dataDir: path.join(dir, 'data'), serverPath: process.env.STREAMPULSE_SERVER || '', replicants: [{ bundle: 'nodecg-tiltify', name: 'total' }] },
+    Replicant: (name, opts) => typeof opts === 'string'
+        ? (reps[`${opts}.${name}`] ??= { on(ev, fn) { this.fn = fn; } })
+        : (reps[name] ??= { value: opts?.defaultValue }),
     sendMessage: (name, data) => messages.push({ name, data }),
     log: { info() {}, warn: console.warn, error: console.error }
 };
@@ -17,6 +19,9 @@ const nodecg = {
     await new Promise(r => setTimeout(r, 150));
     assert.ok(JSON.stringify(reps.timers.value).includes('smoke'), 'timers replicant not updated');
     assert.ok(messages.some(m => m.name === 'event'), 'no event messages');
+    reps['nodecg-tiltify.total'].fn({ amount: 42 });
+    const st = await (await fetch('http://127.0.0.1:3917/api/status')).json();
+    assert.equal(st.external['nodecg-tiltify.total'].amount, 42, 'replicant not shared');
     await require(nodecg.bundleConfig.serverPath || 'streampulse/server.js').stopServer();
     fs.rmSync(dir, { recursive: true, force: true });
     console.log('streampulse bundle smoke test passed');

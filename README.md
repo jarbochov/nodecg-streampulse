@@ -11,6 +11,13 @@ Runs [StreamPulse](https://github.com/jarbochov/StreamPulse) inside NodeCG (one 
 `status`, `timers`, `goals`, `viewers`, `music`, `poll`, `matchup`, `tournament`, `pollTournament`.
 Every StreamPulse broadcast is also sent as the `event` message (`{ type, data }`).
 
+## Replicants in StreamPulse overlays
+List replicants from any bundle in `cfg/streampulse.json`:
+```json
+{ "replicants": [{ "bundle": "nodecg-tiltify", "name": "total" }] }
+```
+They appear in the Custom Overlay Editor variable picker under "NodeCG: <bundle>.<name>" and resolve as `{{rep.nodecg-tiltify.total.amount}}` (arrays by index, e.g. `.0.name`). Updates push live.
+
 ## Upgrade
 Change the `streampulse` version in `package.json`, run `npm install`, restart NodeCG. Config and data are untouched.
 

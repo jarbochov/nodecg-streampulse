@@ -57,6 +57,14 @@ module.exports = async nodecg => {
         nodecg.sendMessage('event', { type, data });
     });
 
+    // Share selected replicants (any bundle) with StreamPulse overlays.
+    for (const { bundle, name } of cfg.replicants || []) {
+        const rep = nodecg.Replicant(name, bundle);
+        rep.on('change', value => {
+            try { sp.setExternalData(`${bundle}.${name}`, value); } catch (err) { nodecg.log.warn(`Replicant ${bundle}.${name} not shared:`, err.message); }
+        });
+    }
+
     const stop = () => sp.stopServer().catch(err => nodecg.log.error('StreamPulse shutdown failed:', err.message));
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
