@@ -106,6 +106,13 @@ for (const name of ['schedule', 'current', 'total', 'goal', 'donate', 'recent', 
     wantAutofire(name, b, response);
 }
 
+if (!commands.some(x => x.name === 'target')) {
+    commands.push({
+        name: 'target', aliases: ['targets'], access: 'everyone', cooldown: 5, enabled: true,
+        response: 'Current target: {{rep.nodecg-tiltify.activeTarget.name}} - {{rep.nodecg-tiltify.activeTarget.raised|money}} of {{rep.nodecg-tiltify.activeTarget.amount|money}} ({{rep.nodecg-tiltify.activeTarget.percent}}%)'
+    });
+}
+
 for (const c of chat.custom || []) {
     const name = String(c.trigger || '').toLowerCase();
     const where = `custom !${name}`;
