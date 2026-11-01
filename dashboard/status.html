@@ -25,7 +25,7 @@
     const badge = document.getElementById('badge');
     badge.textContent = running ? 'Running' : 'Offline';
     badge.className = `badge ${running ? 'ok' : 'bad'}`;
-    const url = running ? `${s.protocol}://${location.hostname}:${s.publicPort}/` : '';
+    const url = running ? (s.publicUrl || `${s.protocol}://${location.hostname}:${s.publicPort}`).replace(/\/?$/, '/') : '';
     document.getElementById('detail').textContent = running ? url : (s && s.error) || '';
     const open = document.getElementById('open');
     open.hidden = !running;

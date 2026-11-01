@@ -53,7 +53,7 @@ module.exports = async nodecg => {
         for (const key of keys) reps[key].value = JSON.parse(JSON.stringify(snap[key] ?? null));
     };
     refresh(SNAPSHOT_KEYS);
-    status.value = { running: true, port: sp.port, publicPort: cfg.publicPort || sp.port, protocol: process.env.STREAMPULSE_TLS_KEY ? 'https' : 'http', error: null };
+    status.value = { running: true, port: sp.port, publicPort: cfg.publicPort || sp.port, protocol: process.env.STREAMPULSE_TLS_KEY ? 'https' : 'http', publicUrl: cfg.publicUrl || null, error: null };
     nodecg.log.info(`StreamPulse running on port ${sp.port}`);
 
     sp.onBroadcast((type, data) => {

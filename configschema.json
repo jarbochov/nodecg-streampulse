@@ -57,6 +57,10 @@
       "type": "string",
       "default": "/opt/nodecg/ssl/cert.pem",
       "description": "TLS certificate for HTTPS"
+    },
+    "publicUrl": {
+      "type": "string",
+      "description": "Browser-facing StreamPulse URL (e.g. a DSM reverse proxy with a trusted certificate). Overrides protocol/publicPort in the dashboard panels"
     }
   }
 }

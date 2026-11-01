@@ -16,7 +16,7 @@
   status.on('change', s => {
     const msg = document.getElementById('msg');
     if (!s || !s.running) { msg.textContent = s && s.error ? `StreamPulse is not running: ${s.error}` : 'Waiting for StreamPulse...'; return; }
-    const next = `${s.protocol}://${location.hostname}:${s.publicPort}/`;
+    const next = (s.publicUrl || `${s.protocol}://${location.hostname}:${s.publicPort}`).replace(/\/?$/, '/');
     if (next === src) return;
     src = next;
     msg.remove();

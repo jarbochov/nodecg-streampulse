@@ -8,6 +8,8 @@ Runs [StreamPulse](https://github.com/jarbochov/StreamPulse) inside NodeCG (one 
 3. Expose the StreamPulse port from the container and set `publicPort` to the host port (e.g. `3300`).
 4. HTTPS: NodeCG's `ssl/key.pem` and `ssl/cert.pem` are used automatically (`tlsKey`/`tlsCert`; set both to `""` for plain HTTP).
 
+Behind a reverse proxy (e.g. Synology DSM with its Let's Encrypt certificate): set `tlsKey`/`tlsCert` to `""`, proxy `https://*:<port>` to `http://localhost:<publicPort>` with the WebSocket headers enabled, and set `publicUrl`.
+
 ## Dashboard
 A full-bleed "StreamPulse" tab embeds the full StreamPulse UI, and a status panel on the main workspace shows whether it is running with an open link.
 
