@@ -9,7 +9,7 @@ Runs [StreamPulse](https://github.com/jarbochov/StreamPulse) inside NodeCG (one 
 4. HTTPS: NodeCG's `ssl/key.pem` and `ssl/cert.pem` are used automatically (`tlsKey`/`tlsCert`; set both to `""` for plain HTTP).
 
 ## Dashboard
-A "StreamPulse" workspace embeds the full StreamPulse UI, and a status panel on the main workspace shows whether it is running with an open link.
+A full-bleed "StreamPulse" tab embeds the full StreamPulse UI, and a status panel on the main workspace shows whether it is running with an open link.
 
 ## Replicants (`streampulse` bundle)
 `status`, `timers`, `goals`, `viewers`, `music`, `poll`, `matchup`, `tournament`, `pollTournament`.
