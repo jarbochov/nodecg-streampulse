@@ -75,6 +75,7 @@ module.exports = async nodecg => {
     // Tiltify donations -> StreamPulse donation alerts, goals and stats. The startup backlog is only marked as seen.
     const tiltify = { enabled: true, bundle: 'nodecg-tiltify', ...(cfg.tiltifyDonations || {}) };
     if (tiltify.enabled && typeof sp.ingestEvent === 'function') {
+        if (typeof sp.registerHostSource === 'function') sp.registerHostSource({ id: 'tiltify', label: 'Tiltify (NodeCG)' });
         const seen = new Set();
         let primed = false;
         const donations = nodecg.Replicant('donations', tiltify.bundle);

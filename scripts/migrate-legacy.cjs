@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-// Copies the legacy 4s7p-event chat commands and donation alert rules into StreamPulse through its HTTP API.
-// Usage: node scripts/migrate-legacy.cjs [--dry-run] [--force] [--api http://127.0.0.1:3000] [--db path] [--assets dir]
+// Copies the legacy 4s7p-event chat commands, donation alert rules and large-donation chat announcement into StreamPulse through its HTTP API.
+// Usage: node scripts/migrate-legacy.cjs [--dry-run] [--force] [--api http://127.0.0.1:3000] [--db path] [--assets dir] [--cfg cfg/4s7p-event.json]
 // Idempotent: alert rules use ids "nodecg-<legacy id>", timed messages "nodecg-<name>", media "nodecg-<file>".
 // Commands are matched by name; an existing command with different content is left alone unless --force.
 const fs = require('fs');
@@ -15,6 +15,7 @@ const FORCE = argv.includes('--force');
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const DB = opt('db', path.join(ROOT, 'db', 'nodecg.sqlite3'));
 const ASSETS = opt('assets', path.join(ROOT, 'assets', '4s7p-event'));
+const LEGACY_CFG = opt('cfg', path.join(ROOT, 'cfg', '4s7p-event.json'));
 const API = String(opt('api', process.env.STREAMPULSE_API || 'http://127.0.0.1:3000')).replace(/\/+$/, '');
 const CACHE = path.join(__dirname, '..', '.migrate-cache');
 if (API.startsWith('https:') && process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -53,8 +54,8 @@ const resp = chat.responses || {};
 const repKeys = new Set();
 const rep = key => { repKeys.add(key.split('.').slice(0, 2).join('.')); return `{{rep.${key}}}`; };
 const VARS = {
-    total: () => `$${rep('nodecg-tiltify.total')}`,
-    goal: () => `$${rep('nodecg-tiltify.campaignGoal')}`,
+    total: () => rep('nodecg-tiltify.total').replace('}}', '|money}}'),
+    goal: () => rep('nodecg-tiltify.campaignGoal').replace('}}', '|money}}'),
     current_game: () => rep('4s7p-event.scheduleData.current.title'),
     current_system: () => rep('4s7p-event.scheduleData.current.system'),
     campaign: () => rep('nodecg-tiltify.campaign.name'),
@@ -102,7 +103,6 @@ for (const name of ['schedule', 'current', 'total', 'goal', 'donate', 'recent', 
     commands.push({ name, aliases: BUILTIN_ALIASES[name] || [], response, access: access(b, where), cooldown: b.cooldown ?? chat.globalCooldown ?? 5, enabled: b.enabled !== false });
     wantAutofire(name, b, response);
 }
-if (repKeys.size) note('{total}/{goal} render as raw numbers (legacy formatted them as $1,234.00)');
 
 for (const c of chat.custom || []) {
     const name = String(c.trigger || '').toLowerCase();
@@ -169,11 +169,26 @@ for (const r of rules) {
         name: r.name || `Donation ${min}`,
         enabled: true,
         trigger: 'donation',
-        conditions: { minAmount: min, maxAmount: max },
+        // Legacy alerts only fired for Tiltify donations.
+        conditions: type === 'exact' ? { amountMode: 'exact', exactAmount: min, minAmount: min, maxAmount: min, source: 'tiltify' } : { amountMode: max ? 'range' : 'min', minAmount: min, maxAmount: max, source: 'tiltify' },
         pick: 'random',
         variants: list.map((o, i) => variantFor(r, o.media, o.sound, i))
     });
 }
+// ---- Large donation chat announcement (cfg/4s7p-event.json socialstream) ---
+let legacyCfg = {};
+try { legacyCfg = JSON.parse(fs.readFileSync(LEGACY_CFG, 'utf8')); } catch (err) { note(`legacy config ${LEGACY_CFG} not read (${err.message}); donation announcement not migrated`); }
+const ss = legacyCfg.socialstream;
+const donationAnnouncements = ss ? {
+    enabled: ss.enabled === true,
+    source: 'tiltify',
+    minAmount: Number(ss.large_donation_threshold) || 50,
+    template: '{user} just donated {amount}! {message}',
+    totalVar: 'rep.nodecg-tiltify.total',
+    goalVar: 'rep.nodecg-tiltify.campaignGoal'
+} : null;
+if (donationAnnouncements?.enabled) note('large donation announcements now come from StreamPulse; disable socialstream.enabled in cfg/4s7p-event.json to avoid double posts');
+
 if (alertsCfg.playLocalAudio) note('alertsConfig.playLocalAudio (host-side audio playback) has no StreamPulse equivalent; audio plays in the overlay browser source');
 
 // ---- Report / apply ------------------------------------------------------
@@ -187,9 +202,10 @@ function report() {
     for (const m of messages) console.log(`  ${m.id}  every ${m.every} min, after chat activity  ${m.text.slice(0, 70)}`);
     console.log(`\nDonation alert rules (${alertRules.length}):`);
     for (const r of alertRules) {
-        const range = r.conditions.minAmount === r.conditions.maxAmount ? `= ${money(r.conditions.minAmount)}` : `${money(r.conditions.minAmount)} - ${r.conditions.maxAmount ? money(r.conditions.maxAmount) : 'any'}`;
-        console.log(`  ${r.id}  ${r.name}  ${range}  ${r.variants.length} variant(s)  ${r.variants.map(v => [v.image || v.video, v.sound].filter(Boolean).join(' + ').replace(/@asset:/g, '')).join(' | ')}  ${r.variants[0].duration}s`);
+        const range = r.conditions.amountMode === 'exact' ? `= ${money(r.conditions.exactAmount)}` : `${money(r.conditions.minAmount)} - ${r.conditions.maxAmount ? money(r.conditions.maxAmount) : 'any'}`;
+        console.log(`  ${r.id}  ${r.name}  ${range}  ${r.conditions.source}  ${r.variants.length} variant(s)  ${r.variants.map(v => [v.image || v.video, v.sound].filter(Boolean).join(' + ').replace(/@asset:/g, '')).join(' | ')}  ${r.variants[0].duration}s`);
     }
+    if (donationAnnouncements) console.log(`\nDonation chat announcement: ${donationAnnouncements.enabled ? 'on' : 'off'}, Tiltify, ${money(donationAnnouncements.minAmount)} or more, "${donationAnnouncements.template}"`);
     console.log(`\nMedia to copy (${media.size}):`);
     for (const m of media.values()) console.log(`  ${path.basename(m.file)} -> ${m.uploadName}${/\.mov$/i.test(m.file) ? ' (remuxed MOV to MP4)' : ''}${m.exists ? '' : ' MISSING'}`);
     if (skipped.length) { console.log(`\nNot migrated (${skipped.length}):`); for (const s of skipped) console.log(`  ${s}`); }
@@ -251,7 +267,7 @@ async function uploadMedia() {
         counts.updated++;
     }
     const msgs = [...bot.messages.filter(m => !messages.some(n => n.id === m.id)), ...messages];
-    await api('PUT', '/api/chatbot', { commands: list, messages: msgs });
-    console.log(`  commands: ${counts.added} added, ${counts.updated} updated, ${counts.unchanged} unchanged, ${counts.conflict} conflicts; timed messages: ${messages.length} written`);
+    await api('PUT', '/api/chatbot', { commands: list, messages: msgs, ...(donationAnnouncements ? { settings: { donationAnnouncements: { ...(bot.settings?.donationAnnouncements || {}), ...donationAnnouncements } } } : {}) });
+    console.log(`  commands: ${counts.added} added, ${counts.updated} updated, ${counts.unchanged} unchanged, ${counts.conflict} conflicts; timed messages: ${messages.length} written${donationAnnouncements ? '; donation announcement settings written' : ''}`);
     console.log('Done. Changes are live; no restart needed.');
 })().catch(err => { console.error(`Migration failed: ${err.message}`); process.exit(1); });

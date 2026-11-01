@@ -35,6 +35,7 @@ const nodecg = {
     assert.equal(shown[0].event.amount, 25);
     const st = await (await fetch('http://127.0.0.1:3917/api/status')).json();
     assert.equal(st.external['nodecg-tiltify.total'].amount, 42, 'replicant not shared');
+    assert.deepEqual(st.hostSources, [{ id: 'tiltify', label: 'Tiltify (NodeCG)' }], 'tiltify host source not registered');
     await require(nodecg.bundleConfig.serverPath || 'streampulse/server.js').stopServer();
     fs.rmSync(dir, { recursive: true, force: true });
     console.log('streampulse bundle smoke test passed');
