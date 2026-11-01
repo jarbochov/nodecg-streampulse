@@ -57,6 +57,41 @@ module.exports = async nodecg => {
     status.value = { running: true, port: sp.port, publicPort: cfg.publicPort || sp.port, protocol: process.env.STREAMPULSE_TLS_KEY ? 'https' : 'http', publicUrl: cfg.publicUrl || null, error: null };
     nodecg.log.info(`StreamPulse running on port ${sp.port}`);
 
+    // Runtime health: poll /api/status, record state; reconnect hook restarts the server.
+    const base = () => `${process.env.STREAMPULSE_TLS_KEY ? 'https' : 'http'}://127.0.0.1:${sp.port}`;
+    const probe = () => new Promise(resolve => {
+        const lib = process.env.STREAMPULSE_TLS_KEY ? require('https') : require('http');
+        const req = lib.get(`${base()}/api/status`, { rejectUnauthorized: false, timeout: 4000 }, res => {
+            let body = '';
+            res.on('data', c => { if (body.length < 2e6) body += c; });
+            res.on('end', () => {
+                if (res.statusCode >= 400) return resolve({ err: `HTTP ${res.statusCode}` });
+                let ssn = null;
+                try { const j = JSON.parse(body).ssn || {}; ssn = !j.session ? 'not-configured' : j.connected ? 'connected' : 'disconnected'; } catch (_) {}
+                resolve({ err: null, ssn });
+            });
+        });
+        req.on('timeout', () => req.destroy(new Error('Timeout')));
+        req.on('error', e => resolve({ err: e.message || 'Unreachable' }));
+    });
+    let fails = 0;
+    const check = async () => {
+        const { err, ssn } = await probe();
+        const cur = status.value || {};
+        if (!err) { fails = 0; status.value = { ...cur, running: true, state: 'ok', error: null, lastOk: Date.now(), ssn }; }
+        else { fails++; status.value = { ...cur, state: 'error', error: err, lastError: err, lastErrorAt: Date.now() }; }
+    };
+    setInterval(check, 15000).unref();
+    check();
+    nodecg.listenFor('restart', async (v, ack) => {
+        try {
+            await sp.stopServer();
+            await sp.startServer();
+            await check();
+            if (ack && !ack.handled) ack(null, true);
+        } catch (e) { status.value = { ...(status.value || {}), state: 'error', error: e.message }; if (ack && !ack.handled) ack(e.message); }
+    });
+
     sp.onBroadcast((type, data) => {
         const key = REPLICANT_FOR[type];
         if (key) {
