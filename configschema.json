@@ -54,6 +54,17 @@
         "bundle": { "type": "string", "default": "nodecg-tiltify", "description": "Bundle that owns the donations replicant" }
       }
     },
+    "legacyCommands": {
+      "type": "object",
+      "default": { "enabled": true, "bundle": "4s7p-event", "tiltifyBundle": "nodecg-tiltify" },
+      "description": "Publish legacy built-in chat command replies (!schedule, !recent, !gamestats, !host, !commentators, !players) as {{rep.streampulse.cmd.<name>}}",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "bundle": { "type": "string", "default": "4s7p-event", "description": "Bundle that owns scheduleData, playersData, gameSessionLog, webhookDonations and chatCommands" },
+        "tiltifyBundle": { "type": "string", "default": "nodecg-tiltify", "description": "Bundle that owns the alldonations replicant" }
+      }
+    },
     "publicPort": {
       "type": "integer",
       "description": "Host port StreamPulse is published on (Docker mapping), used by the dashboard panels. Defaults to port"

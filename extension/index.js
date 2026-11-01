@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const legacyCommands = require('./legacy-commands');
 
 // Broadcast type -> replicant fed from StreamPulse's authoritative snapshot.
 const REPLICANT_FOR = {
@@ -71,6 +72,10 @@ module.exports = async nodecg => {
             try { sp.setExternalData(`${bundle}.${name}`, value); } catch (err) { nodecg.log.warn(`Replicant ${bundle}.${name} not shared:`, err.message); }
         });
     }
+
+    // Legacy 4s7p-event built-in command replies -> {{rep.streampulse.cmd.<name>}}.
+    const legacy = { enabled: true, bundle: '4s7p-event', tiltifyBundle: 'nodecg-tiltify', ...(cfg.legacyCommands || {}) };
+    if (legacy.enabled) legacyCommands.attach(nodecg, sp, legacy);
 
     // Tiltify donations -> StreamPulse donation alerts, goals and stats. The startup backlog is only marked as seen.
     const tiltify = { enabled: true, bundle: 'nodecg-tiltify', ...(cfg.tiltifyDonations || {}) };

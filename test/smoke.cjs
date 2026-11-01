@@ -36,6 +36,25 @@ const nodecg = {
     const st = await (await fetch('http://127.0.0.1:3917/api/status')).json();
     assert.equal(st.external['nodecg-tiltify.total'].amount, 42, 'replicant not shared');
     assert.deepEqual(st.hostSources, [{ id: 'tiltify', label: 'Tiltify (NodeCG)' }], 'tiltify host source not registered');
+    // Legacy built-in command replies published as {{rep.streampulse.cmd.<name>}}.
+    const legacy = name => reps[`4s7p-event.${name}`];
+    legacy('playersData').value = { players: [{ id: 'player1', value: 'Alpha' }, { id: 'player1pronoun', value: 'they' }, { id: 'player2', value: 'Beta, ' }], commentatorsAndHosts: [{ id: 'host1', value: 'Host One' }, { id: 'commentator1', value: 'Caster A' }, { id: 'commentator2', value: 'Caster B' }] };
+    legacy('scheduleData').value = { nextGames: [{ title: 'Fictional Quest', system: 'NES', time: new Date(Date.now() + 90 * 60000 + 5000).toISOString() }, { title: 'Pretend Kart' }] };
+    legacy('gameSessionLog').value = [{ gameTitle: 'Fictional Quest', actualStart: new Date(Date.now() - 60000).toISOString() }];
+    reps['nodecg-tiltify.alldonations'].value = [{ donor_name: 'FictionalDonor', amount: { value: '25.00' }, created_at: new Date().toISOString() }, { amount: '5' }];
+    legacy('playersData').fn();
+    await new Promise(r => setTimeout(r, 400));
+    const cmd = (await (await fetch('http://127.0.0.1:3917/api/status')).json()).external['streampulse.cmd'];
+    assert.deepEqual(cmd, {
+        schedule: '\uD83D\uDCCB Up next: 1. Fictional Quest (NES) (~1h 30m) | 2. Pretend Kart (?)\nFull schedule: https://4score7pongs.com/schedule',
+        recent: '\uD83D\uDCB5 Recent donations: FictionalDonor - $25.00 | Anonymous - $5.00',
+        gamestats: '\uD83D\uDCCA Fictional Quest: $25.00 from 1 donations',
+        host: '\uD83C\uDF99\uFE0F Host: Host One',
+        commentators: '\uD83C\uDFA4 Commentators: Caster A & Caster B',
+        players: '\uD83C\uDFAE Players: Alpha, Beta'
+    });
+    const preview = await (await fetch('http://127.0.0.1:3917/api/chatbot/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: '{{rep.streampulse.cmd.commentators}}' }) })).json();
+    assert.equal(preview.text, cmd.commentators, 'command placeholder not resolved');
     await require(nodecg.bundleConfig.serverPath || 'streampulse/server.js').stopServer();
     fs.rmSync(dir, { recursive: true, force: true });
     console.log('streampulse bundle smoke test passed');

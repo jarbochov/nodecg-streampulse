@@ -82,7 +82,8 @@ const BUILTIN_TEMPLATES = {
     current: 'Now playing: {current_game} ({current_system})',
     donate: `${resp.donate_message || 'Donate here:'} {donate_url}`
 };
-const BUILTIN_UNSUPPORTED = { schedule: 'upcoming game list with ETAs', recent: 'recent donation list', gamestats: 'per-game donation stats', host: 'host list from playersData', commentators: 'commentator list from playersData', players: 'player list from playersData' };
+// Replies computed by extension/legacy-commands.js and published as {{rep.streampulse.cmd.<name>}}.
+for (const name of ['schedule', 'recent', 'gamestats', 'host', 'commentators', 'players']) BUILTIN_TEMPLATES[name] = `{{rep.streampulse.cmd.${name}}}`;
 const BUILTIN_ALIASES = { host: ['hosts'], commentators: ['commentator'], players: ['player'] };
 
 const commands = [];
@@ -98,7 +99,8 @@ for (const name of ['schedule', 'current', 'total', 'goal', 'donate', 'recent', 
     if (!b) continue;
     const where = `builtin !${name}`;
     const template = b.response && b.response.trim() ? b.response : BUILTIN_TEMPLATES[name];
-    if (!template) { skipped.push(`!${name}${BUILTIN_ALIASES[name] ? ` (+ ${BUILTIN_ALIASES[name].map(a => '!' + a).join(', ')})` : ''} (built-in: ${BUILTIN_UNSUPPORTED[name]})`); continue; }
+    if (!template) continue;
+    if (name === 'schedule' || name === 'recent') note(`${where}: count argument (e.g. !${name} 5) is ignored; always lists 3`);
     const response = convert(template, where);
     commands.push({ name, aliases: BUILTIN_ALIASES[name] || [], response, access: access(b, where), cooldown: b.cooldown ?? chat.globalCooldown ?? 5, enabled: b.enabled !== false });
     wantAutofire(name, b, response);

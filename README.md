@@ -33,6 +33,9 @@ Donations are tagged `source: 'tiltify'`, and the bundle registers Tiltify as a 
 
 Requires a StreamPulse version that exports `ingestEvent`; older versions skip the bridge.
 
+## Legacy built-in command replies
+`extension/legacy-commands.js` ports the `4s7p-event` built-in replies for `!schedule`, `!recent`, `!gamestats`, `!host`, `!commentators` and `!players` (identical text, 3 items for lists). It watches `scheduleData`, `playersData`, `gameSessionLog`, `webhookDonations`, `chatCommands` (for `schedule_url`/`no_games`) and `nodecg-tiltify` `alldonations`, recomputes debounced and every 30 s for ETAs, and publishes the external data key `streampulse.cmd`. Use `{{rep.streampulse.cmd.<name>}}` in StreamPulse commands. Configure with `"legacyCommands": { "enabled": true, "bundle": "4s7p-event", "tiltifyBundle": "nodecg-tiltify" }`.
+
 ## Migrating legacy chat commands and alerts
 `scripts/migrate-legacy.cjs` copies the `4s7p-event` `chatCommands` and `alertRules` replicants (read-only from `db/nodecg.sqlite3`) into StreamPulse through its HTTP API, uploading alert media (MOV files are remuxed to MP4 with `ffmpeg`). Changes are live; no restart is needed.
 ```sh
@@ -41,7 +44,7 @@ node scripts/migrate-legacy.cjs --api http://127.0.0.1:3000       # apply (insid
 ```
 Legacy `exact` alerts become StreamPulse "Equal to" rules and every migrated rule is limited to the Tiltify source. The large-donation chat announcement (`socialstream.large_donation_threshold` in `cfg/4s7p-event.json`, read only) becomes a Tiltify-only StreamPulse donation announcement with `{total}`/`{goal}` mapped to the Tiltify replicants; set `socialstream.enabled: false` in that file to avoid double posts.
 
-Options: `--api` (or `STREAMPULSE_API`), `--db`, `--assets`, `--cfg`, `--force` (overwrite StreamPulse commands with the same name but different content). Re-runs update in place: alert rules use ids `nodecg-<legacy id>`, the autofire message `nodecg-<name>`, media `nodecg-<file>`. Add the replicants it lists (`4s7p-event.scheduleData`, `nodecg-tiltify.total`, `nodecg-tiltify.campaignGoal`) to `replicants` so command placeholders resolve.
+Options: `--api` (or `STREAMPULSE_API`), `--db`, `--assets`, `--cfg`, `--force` (overwrite StreamPulse commands with the same name but different content). Re-runs update in place: alert rules use ids `nodecg-<legacy id>`, the autofire message `nodecg-<name>`, media `nodecg-<file>`. The six built-ins above migrate as `{{rep.streampulse.cmd.<name>}}` commands with the legacy aliases, permission and cooldown; their count argument (`!schedule 5`) is ignored. Add the replicants it lists (`4s7p-event.scheduleData`, `nodecg-tiltify.total`, `nodecg-tiltify.campaignGoal`) to `replicants` so command placeholders resolve.
 
 ## Upgrade
 Change the `streampulse` version in `package.json`, run `npm install` (or delete `node_modules/streampulse` so the container reinstalls it), restart NodeCG. Config and data are untouched.
