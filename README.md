@@ -5,7 +5,11 @@ Runs [StreamPulse](https://github.com/jarbochov/StreamPulse) inside NodeCG (one 
 ## Install
 1. Clone into `bundles/streampulse` and run `npm install` (requires Node 22.12+).
 2. Optional `cfg/streampulse.json`: `port` (default 3000), `configPath`, `dataDir`. Keep both paths on a Docker volume so updates never touch them.
-3. Expose the StreamPulse port from the container.
+3. Expose the StreamPulse port from the container and set `publicPort` to the host port (e.g. `3300`).
+4. HTTPS: NodeCG's `ssl/key.pem` and `ssl/cert.pem` are used automatically (`tlsKey`/`tlsCert`; set both to `""` for plain HTTP).
+
+## Dashboard
+A "StreamPulse" workspace embeds the full StreamPulse UI, and a status panel on the main workspace shows whether it is running with an open link.
 
 ## Replicants (`streampulse` bundle)
 `status`, `timers`, `goals`, `viewers`, `music`, `poll`, `matchup`, `tournament`, `pollTournament`.

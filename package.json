@@ -4,9 +4,24 @@
   "description": "Runs StreamPulse inside NodeCG and publishes its live state as replicants",
   "license": "MIT",
   "nodecg": {
-    "compatibleRange": "^2.0.0"
+    "compatibleRange": "^2.0.0",
+    "dashboardPanels": [
+      {
+        "name": "streampulse",
+        "title": "StreamPulse",
+        "file": "streampulse.html",
+        "workspace": "StreamPulse",
+        "fullbleed": true
+      },
+      {
+        "name": "streampulse-status",
+        "title": "StreamPulse",
+        "file": "status.html",
+        "width": 2
+      }
+    ]
   },
   "dependencies": {
-    "streampulse": "github:jarbochov/StreamPulse#2eb77c1"
+    "streampulse": "github:jarbochov/StreamPulse#f55bbe8"
   }
 }

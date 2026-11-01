@@ -43,6 +43,20 @@
           }
         }
       }
+    },
+    "publicPort": {
+      "type": "integer",
+      "description": "Host port StreamPulse is published on (Docker mapping), used by the dashboard panels. Defaults to port"
+    },
+    "tlsKey": {
+      "type": "string",
+      "default": "/opt/nodecg/ssl/key.pem",
+      "description": "TLS key for HTTPS (empty string serves plain HTTP)"
+    },
+    "tlsCert": {
+      "type": "string",
+      "default": "/opt/nodecg/ssl/cert.pem",
+      "description": "TLS certificate for HTTPS"
     }
   }
 }
