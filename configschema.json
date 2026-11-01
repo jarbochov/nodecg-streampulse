@@ -44,6 +44,16 @@
         }
       }
     },
+    "tiltifyDonations": {
+      "type": "object",
+      "default": { "enabled": true, "bundle": "nodecg-tiltify" },
+      "description": "Forward new Tiltify donations (donations replicant) to StreamPulse donation alerts, goals and stats",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "bundle": { "type": "string", "default": "nodecg-tiltify", "description": "Bundle that owns the donations replicant" }
+      }
+    },
     "publicPort": {
       "type": "integer",
       "description": "Host port StreamPulse is published on (Docker mapping), used by the dashboard panels. Defaults to port"

@@ -21,6 +21,6 @@
     ]
   },
   "dependencies": {
-    "streampulse": "github:jarbochov/StreamPulse#f55bbe8"
+    "streampulse": "github:jarbochov/StreamPulse#9af8fcd"
   }
 }

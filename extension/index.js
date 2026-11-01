@@ -72,6 +72,35 @@ module.exports = async nodecg => {
         });
     }
 
+    // Tiltify donations -> StreamPulse donation alerts, goals and stats. The startup backlog is only marked as seen.
+    const tiltify = { enabled: true, bundle: 'nodecg-tiltify', ...(cfg.tiltifyDonations || {}) };
+    if (tiltify.enabled && typeof sp.ingestEvent === 'function') {
+        const seen = new Set();
+        let primed = false;
+        const donations = nodecg.Replicant('donations', tiltify.bundle);
+        donations.on('change', list => {
+            if (!Array.isArray(list)) return;
+            for (const d of list) {
+                const id = d && d.id !== undefined && d.id !== null ? String(d.id) : '';
+                if (!id || seen.has(id)) continue;
+                seen.add(id);
+                if (!primed) continue;
+                try {
+                    sp.ingestEvent({
+                        type: 'donation',
+                        id: `tiltify-${id}`,
+                        user: d.donor_name || 'Anonymous',
+                        amount: Number(d.amount?.value ?? d.amount) || 0,
+                        currency: d.amount?.currency || 'USD',
+                        message: d.donor_comment || '',
+                        source: 'tiltify'
+                    });
+                } catch (err) { nodecg.log.warn(`Tiltify donation ${id} not forwarded:`, err.message); }
+            }
+            primed = true;
+        });
+    }
+
     const stop = () => sp.stopServer().catch(err => nodecg.log.error('StreamPulse shutdown failed:', err.message));
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
