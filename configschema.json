@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "port": { "type": "integer", "default": 3000, "description": "Port StreamPulse serves its pages, API and overlay WebSocket on" },
+    "configPath": { "type": "string", "default": "/opt/nodecg/streampulse/config.json", "description": "StreamPulse config.json (kept outside the bundle so updates never touch it)" },
+    "dataDir": { "type": "string", "default": "/opt/nodecg/streampulse/data", "description": "StreamPulse data folder (mount as a Docker volume)" },
+    "serverPath": { "type": "string", "default": "", "description": "Optional path to a local StreamPulse server.js (development only)" }
+  }
+}

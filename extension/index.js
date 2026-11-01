@@ -1,0 +1,63 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+
+// Broadcast type -> replicant fed from StreamPulse's authoritative snapshot.
+const REPLICANT_FOR = {
+    'timers-snapshot': 'timers', 'timer-update': 'timers', 'timer-delete': 'timers', 'timer-settings': 'timers',
+    'goals-update': 'goals',
+    'viewer-update': 'viewers',
+    music: 'music',
+    'poll-update': 'poll',
+    'matchup-update': 'matchup',
+    'tournament-update': 'tournament',
+    'poll-tournament-update': 'pollTournament'
+};
+const SNAPSHOT_KEYS = [...new Set(Object.values(REPLICANT_FOR))];
+
+module.exports = async nodecg => {
+    const cfg = nodecg.bundleConfig || {};
+    const configPath = cfg.configPath || '/opt/nodecg/streampulse/config.json';
+    const dataDir = cfg.dataDir || '/opt/nodecg/streampulse/data';
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(configPath)) fs.writeFileSync(configPath, JSON.stringify({ port: cfg.port || 3000 }, null, 2));
+
+    process.env.STREAMPULSE_EMBEDDED = 'true';
+    process.env.STREAMPULSE_CONFIG_PATH = configPath;
+    process.env.STREAMPULSE_DATA_DIR = dataDir;
+    process.env.PORT = String(cfg.port || 3000);
+
+    const status = nodecg.Replicant('status', { persistent: false, defaultValue: { running: false, port: null, error: null } });
+    const reps = Object.fromEntries(SNAPSHOT_KEYS.map(key => [key, nodecg.Replicant(key, { persistent: false, defaultValue: null })]));
+
+    let sp;
+    try {
+        sp = require(cfg.serverPath || 'streampulse/server.js');
+        await sp.startServer();
+    } catch (err) {
+        status.value = { running: false, port: null, error: err.message };
+        nodecg.log.error('StreamPulse failed to start:', err.message);
+        return;
+    }
+
+    const refresh = keys => {
+        const snap = sp.getSnapshots();
+        for (const key of keys) reps[key].value = JSON.parse(JSON.stringify(snap[key] ?? null));
+    };
+    refresh(SNAPSHOT_KEYS);
+    status.value = { running: true, port: sp.port, error: null };
+    nodecg.log.info(`StreamPulse running on port ${sp.port}`);
+
+    sp.onBroadcast((type, data) => {
+        const key = REPLICANT_FOR[type];
+        if (key) {
+            try { refresh([key]); } catch (err) { nodecg.log.warn(`Replicant ${key} refresh failed:`, err.message); }
+        }
+        nodecg.sendMessage('event', { type, data });
+    });
+
+    const stop = () => sp.stopServer().catch(err => nodecg.log.error('StreamPulse shutdown failed:', err.message));
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+};
